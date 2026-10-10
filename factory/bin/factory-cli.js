@@ -47,6 +47,11 @@ Setup
   worktree list | worktree create <job> | worktree remove <job> [--force] [--delete-branch]
   worktree prune [--all]              remove worktrees of finished jobs
 
+Quality control (used by /factory-qc)
+  qc report [--since <days>] [--json]   process metrics + heuristic signals from all jobs
+  qc trace <job>                        one job's timeline, findings and artifact sizes
+  qc check                              lint agents, skills, templates, config contracts
+
 Dashboard & distribution
   serve [--port 4317] [--host 127.0.0.1]   live dashboard at /dashboard/
   vendor                              download pinned React/htm/marked for offline use
@@ -305,6 +310,26 @@ async function main() {
         if (sub === 'remove') return { job: jid, ...w.remove(job, { force: Boolean(flags.force), deleteBranch: Boolean(flags['delete-branch']) }) };
         return die('usage: worktree list | create <job> | remove <job> | prune');
       }));
+    }
+
+    // ------------------------------------------------------------ quality control
+    case 'qc': {
+      const qc = lib('qc');
+      const [sub, id] = args;
+      if (sub === 'report') {
+        const r = qc.report({ sinceDays: flags.since ? Number(flags.since) : undefined });
+        return out(flags.json ? r : JSON.stringify(r, null, 2));
+      }
+      if (sub === 'trace') return out(qc.trace(id));
+      if (sub === 'check') {
+        const res = qc.check();
+        if (flags.json) return out(res);
+        const icon = { ok: '✓', warn: '!', error: '✗' };
+        out(res.checks.map((c) => `${icon[c.level]} ${c.item.padEnd(24)} ${c.detail}`).join('\n') + `\n\n${res.ok ? 'qc check: ok' : 'qc check: errors found'}`);
+        if (!res.ok) process.exitCode = 1;
+        return;
+      }
+      return die('usage: qc report [--since days] | qc trace <job> | qc check');
     }
 
     // ------------------------------------------------------------ dashboard

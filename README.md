@@ -72,6 +72,7 @@ manual choices.
 | `/factory cancel <job>` | Stops a job (`--purge` also deletes its worktree and branch) |
 | `/factory prune` | Removes worktrees of finished jobs |
 | `/factory dashboard` | Starts the live dashboard |
+| `/factory-qc` | Quality-control lead: audits the factory, post-mortems jobs, evaluates skills you bring (see below) |
 
 `<job>` is the full id (`004-rate-limit-login`) or just its number (`4`).
 
@@ -103,6 +104,34 @@ load as plain scripts from a pinned CDN. For offline/air-gapped use, run
 `node factory/bin/factory-cli.js vendor` once (downloads the four pinned files
 into `factory/dashboard/vendor/`) and commit them. Any static server also
 works in read-only mode: `cd factory && python3 -m http.server`.
+
+## Quality control: `/factory-qc`
+
+A process engineer that already knows the factory inside out. Its own
+knowledge base covers the architecture, state machine, file contracts, how
+agents hand work to each other, invariants, extension points and the cost
+model, so it can reason about the system instead of re-reading the code.
+
+| You say | It does |
+| --- | --- |
+| `/factory-qc` | Audits from evidence: `qc check` (contract lint) → `qc report` (first-pass rate, rounds, per-lens CHANGES rate and severities, escalation causes, retries, stage times, artifact sizes, hotspots, contract violations) → reads the artifacts behind each signal → ranked, evidence-cited proposals |
+| `/factory-qc job 7` | Post-mortem of one job: where time and rework went, whether each verdict was right, what to change |
+| `/factory-qc skill <path/url/paste>` | Intake of a skill another developer used: safety scan, essence, 40-point rubric, **which agent and mechanism** (FACTORY.md focus, agent prompt, preloaded `skills:`, new lens, template, CLI), pros/cons, impact on the whole loop and token cost, adapted version |
+| `/factory-qc propose <idea>` | Traces an idea through every stage and contract and writes a proposal |
+| `/factory-qc apply <proposal>` | Applies an approved proposal, verifies with `qc check` (+ tests), journals it |
+| `/factory-qc impact <proposal>` | Before/after metrics: keep, tune or revert |
+
+It never changes the factory without your approval, makes one change at a
+time with a hypothesis and a success metric, and keeps its memory in
+`factory/qc/` (`journal.md` + `proposals/`). Commit that folder.
+
+Evidence tools you can also run directly:
+
+```bash
+node factory/bin/factory-cli.js qc report --since 30   # process metrics + signals
+node factory/bin/factory-cli.js qc trace 7             # one job, step by step
+node factory/bin/factory-cli.js qc check               # agents ↔ config ↔ templates ↔ skills lint
+```
 
 ---
 
@@ -166,6 +195,11 @@ node factory/bin/factory-cli.js roles model reviewer-code opus
 
 Toggles apply to new jobs; each job freezes its reviewer list at creation.
 
+**Giving an agent a skill**: add `skills: [<name>]` to its frontmatter to
+preload `.claude/skills/<name>/SKILL.md` at spawn (agents can't load skills
+on demand; `Skill` isn't in their tool allowlists). Let `/factory-qc skill …`
+decide which agent and whether a lighter mechanism is enough.
+
 **Adding your own lens**: create `.claude/agents/reviewer-<lens>.md` (copy
 an existing reviewer), then
 `node factory/bin/factory-cli.js config set roles.reviewers.<lens> '{"enabled":true,"model":"sonnet","reason":"…"}'`.
@@ -218,6 +252,7 @@ node factory/bin/factory-cli.js help
 .claude/
   skills/factory/SKILL.md          /factory: orchestrator (executes tick actions)
   skills/factory-init/SKILL.md     /factory-init: investigate, configure, toggle roles
+  skills/factory-qc/               /factory-qc: QC lead + references/ knowledge base
   agents/*.md                      8 agents (spec-writer, builder, 5 reviewers, approver)
 factory/
   bin/factory-cli.js               the CLI (zero dependencies)
@@ -228,6 +263,7 @@ factory/
   config.json                      defaults until /factory-init runs
   backlog.md                       feature queue for /factory next
   jobs/                            runtime state (gitignored)
+  qc/                              QC journal + proposals (committed)
 tests/                             end-to-end tests + demo board (not installed)
 ```
 

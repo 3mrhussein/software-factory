@@ -378,3 +378,52 @@ test('dashboard server: state, files, diff, path traversal, backlog write, SSE',
     srv.close();
   }
 });
+
+test('qc: report aggregates verdicts, findings, contract violations; trace and check work', () => {
+  const root = initRepo();
+  f(root, 'roles', 'disable', 'ui-ux');
+  f(root, 'roles', 'disable', 'database');
+  sh('git add -A && git commit -qm cfg', root);
+  const { job: id } = f(root, 'job', 'new', 'Add export button');
+  f(root, 'tick', id);
+  fake.spec(root, id);
+  f(root, 'tick', id);
+  const job = f(root, 'job', 'show', id);
+  fake.build(root, job);
+  f(root, 'tick', id);
+  const table = (rows) => `\n## Findings\n| # | Severity | Location | Issue | Required change |\n| - | - | - | - | - |\n${rows}\n`;
+  write(path.join(jobDir(root, id), 'round-1', 'review-code.md'), `VERDICT: CHANGES\n${table('| 1 | major | `src/export.ts:10` | no tests | add tests |')}`);
+  write(path.join(jobDir(root, id), 'round-1', 'review-security.md'), `VERDICT: CHANGES\n${table('| 1 | nit | `src/export.ts:3` | naming | rename |')}`);
+  f(root, 'tick', id);
+  fake.build(root, job, { file: 'b.txt' });
+  f(root, 'tick', id);
+  for (const l of ['code', 'security']) fake.review(root, id, 2, l, 'PASS');
+  f(root, 'tick', id);
+  fake.decide(root, id, 'APPROVE');
+  f(root, 'tick', id);
+  f(root, 'deliver', id);
+
+  const r = f(root, 'qc', 'report', '--json');
+  assert.equal(r.jobs.total, 1);
+  assert.equal(r.flow.delivered, 1);
+  assert.equal(r.flow.avgRounds, 2);
+  assert.equal(r.flow.firstPassRatePct, 0);
+  assert.equal(r.lenses.code.changes, 1);
+  assert.equal(r.lenses.code.findings.major, 1);
+  assert.deepEqual(r.hotspots, [{ file: 'src/export.ts', blockingFindings: 1 }]);
+  assert.equal(r.contractViolations.length, 1);
+  assert.match(r.contractViolations[0], /security: CHANGES without a blocker\/major/);
+  assert.equal(r.approver.APPROVE, 1);
+
+  const t = f(root, 'qc', 'trace', id);
+  assert.match(t, /R1: code=CHANGES security=CHANGES/);
+  assert.match(t, /code major: src\/export\.ts:10: no tests/);
+
+  assert.match(f(root, 'qc', 'check'), /qc check: ok/);
+  fs.writeFileSync(path.join(root, 'factory/templates/review.md'), 'Verdict: pass\n');
+  fs.writeFileSync(path.join(root, '.claude/agents/reviewer-perf.md'), '---\nname: reviewer-perf\ntools: Read, Write, Bash\nskills:\n  - perf-budget\n---\nrun brief\n');
+  const res = require('child_process').spawnSync('node', [path.join(root, 'factory/bin/factory-cli.js'), 'qc', 'check', '--json'], { encoding: 'utf8' });
+  const checks = JSON.parse(res.stdout).checks;
+  assert.ok(checks.some((c) => c.level === 'error' && /review\.md/.test(c.item)), 'broken marker detected');
+  assert.ok(checks.some((c) => c.level === 'warn' && /reviewer-perf/.test(c.item) && /never run/.test(c.detail)), 'orphan lens agent detected');
+});
