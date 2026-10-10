@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "factory/job.schema.json",
+  "title": "Software Factory job",
+  "description": "factory/jobs/<id>/job.json. Written ONLY by factory-cli (atomic rename), read by the orchestrator and the dashboard.",
+  "type": "object",
+  "required": ["schemaVersion", "id", "feature", "stage", "branch", "baseBranch", "worktree", "round", "maxRounds", "resumesUsed", "reviewers", "reviews", "rounds", "createdAt", "updatedAt", "history"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[0-9]{3,}-[a-z0-9][a-z0-9-]*$" },
+    "feature": { "type": "string", "minLength": 1 },
+    "source": { "enum": ["command", "backlog"] },
+    "stage": { "$ref": "#/definitions/stage" },
+    "branch": { "type": "string" },
+    "baseBranch": { "type": "string" },
+    "baseCommit": { "type": ["string", "null"] },
+    "worktree": { "type": "string", "description": "Absolute path." },
+    "setupDone": { "type": "boolean" },
+    "round": { "type": "integer", "minimum": 0, "description": "Current review round; 0 before the first review." },
+    "maxRounds": { "type": "integer", "minimum": 1 },
+    "resumesUsed": { "type": "integer", "minimum": 0 },
+    "reworks": { "type": "integer", "minimum": 0, "description": "Human /factory rework count." },
+    "reviewers": { "type": "array", "items": { "type": "string" }, "description": "Lenses active for this job, frozen at creation." },
+    "reviews": {
+      "type": "object",
+      "description": "Verdicts for the current round only.",
+      "additionalProperties": { "$ref": "#/definitions/verdict" }
+    },
+    "rounds": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["n", "verdicts", "startedAt"],
+        "additionalProperties": false,
+        "properties": {
+          "n": { "type": "integer", "minimum": 1 },
+          "verdicts": { "type": "object", "additionalProperties": { "$ref": "#/definitions/verdict" } },
+          "startedAt": { "type": "string" },
+          "endedAt": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "build": { "type": ["string", "null"], "enum": ["READY", "BLOCKED", null] },
+    "decision": { "type": ["string", "null"], "enum": ["APPROVE", "ESCALATE", null] },
+    "humanApproved": { "type": "boolean" },
+    "awaiting": {
+      "type": "array",
+      "description": "Agents the orchestrator was told to run and has not reported back on.",
+      "items": { "type": "string" }
+    },
+    "retries": { "type": "object", "additionalProperties": { "type": "integer" } },
+    "pendingRework": { "type": ["integer", "null"] },
+    "ports": { "type": "object", "additionalProperties": { "type": "integer" } },
+    "delivery": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "strategy": { "enum": ["direct-merge", "github-pr"] },
+        "status": { "enum": ["merged", "pr-open", "failed"] },
+        "prUrl": { "type": ["string", "null"] },
+        "mergeCommit": { "type": ["string", "null"] },
+        "at": { "type": "string" }
+      }
+    },
+    "attention": { "type": ["string", "null"], "description": "Why the job needs a human (set with stage needs-human)." },
+    "error": { "type": ["string", "null"] },
+    "createdAt": { "type": "string" },
+    "updatedAt": { "type": "string" },
+    "history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["at", "stage", "note"],
+        "additionalProperties": false,
+        "properties": {
+          "at": { "type": "string" },
+          "stage": { "$ref": "#/definitions/stage" },
+          "round": { "type": "integer" },
+          "note": { "type": "string" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "stage": { "enum": ["setup", "spec", "build", "review", "approve", "deliver", "delivered", "needs-human", "cancelled"] },
+    "verdict": { "enum": ["pending", "PASS", "CHANGES"] }
+  }
+}

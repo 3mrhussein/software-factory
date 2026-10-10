@@ -1,0 +1,71 @@
+{
+  "$schema": "./schema/config.schema.json",
+  "schemaVersion": 1,
+  "initialized": false,
+  "initializedAt": null,
+  "project": {
+    "name": null,
+    "summary": null,
+    "languages": [],
+    "packageManagers": [],
+    "frameworks": [],
+    "monorepo": { "enabled": false, "tool": null, "packages": [] },
+    "frontend": { "kind": "none", "frameworks": [], "paths": [] },
+    "database": { "detected": false, "technologies": [], "paths": [] }
+  },
+  "commands": {
+    "setup": null,
+    "build": null,
+    "test": null,
+    "lint": null,
+    "typecheck": null,
+    "format": null,
+    "dev": null
+  },
+  "git": {
+    "baseBranch": "main",
+    "remote": "origin",
+    "branchPattern": "factory/{id}",
+    "worktreeRoot": "../{repo}-factory",
+    "commitStyle": "conventional"
+  },
+  "delivery": {
+    "strategy": "direct-merge",
+    "draftPr": false,
+    "removeWorktreeAfterDelivery": true
+  },
+  "approval": {
+    "mode": "auto",
+    "escalatePaths": [
+      ".github/**",
+      ".gitlab-ci.yml",
+      "**/Dockerfile",
+      "**/docker-compose*.yml",
+      "**/*.tf",
+      "infra/**",
+      "deploy/**",
+      "**/.env*",
+      "**/migrations/**"
+    ],
+    "notes": []
+  },
+  "loop": {
+    "maxReworkRounds": 2,
+    "agentRetries": 1,
+    "setupTimeoutSec": 900
+  },
+  "ports": { "base": 5100, "stride": 10 },
+  "tools": { "gh": false, "browser": null, "docker": false },
+  "roles": {
+    "spec-writer": { "model": "opus" },
+    "builder": { "model": "opus" },
+    "approver": { "model": "opus" },
+    "reviewers": {
+      "code": { "enabled": true, "model": "sonnet", "reason": "universal" },
+      "security": { "enabled": true, "model": "opus", "reason": "universal" },
+      "ui-ux": { "enabled": false, "model": "sonnet", "mode": "static", "reason": "not initialized" },
+      "database": { "enabled": false, "model": "opus", "reason": "not initialized" },
+      "architecture": { "enabled": false, "model": "sonnet", "reason": "not initialized" }
+    }
+  }
+}

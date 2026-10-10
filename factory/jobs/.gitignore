@@ -1,0 +1,3 @@
+# Job folders are runtime state; keep them out of git.
+*
+!.gitignore
