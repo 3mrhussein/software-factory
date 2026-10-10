@@ -291,10 +291,17 @@ function tick(idOrNum, { retry = false } = {}) {
     }
     for (let guard = 0; guard < 10; guard++) {
       const action = step(job, cfg);
-      if (action) return action;
+      if (action) return withFollowUp(action, job, cfg);
     }
     die('tick made no progress (state machine loop); inspect job.json');
   });
+}
+
+// A finished job may hand itself to the background QC agent (config.qc).
+function withFollowUp(action, job, cfg) {
+  if (!['halt', 'done'].includes(action.action)) return action;
+  const fu = require('./qc').followUp(jobs.load(job.id), cfg);
+  return fu ? { ...action, followUp: fu } : action;
 }
 
 // ---------------------------------------------------------------- human commands
@@ -369,4 +376,4 @@ function cancel(idOrNum, { purge = false } = {}) {
   });
 }
 
-module.exports = { tick, record, approve, rework, cancel };
+module.exports = { tick, record, approve, rework, cancel, withFollowUp };

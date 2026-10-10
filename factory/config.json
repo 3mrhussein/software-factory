@@ -9,9 +9,21 @@
     "languages": [],
     "packageManagers": [],
     "frameworks": [],
-    "monorepo": { "enabled": false, "tool": null, "packages": [] },
-    "frontend": { "kind": "none", "frameworks": [], "paths": [] },
-    "database": { "detected": false, "technologies": [], "paths": [] }
+    "monorepo": {
+      "enabled": false,
+      "tool": null,
+      "packages": []
+    },
+    "frontend": {
+      "kind": "none",
+      "frameworks": [],
+      "paths": []
+    },
+    "database": {
+      "detected": false,
+      "technologies": [],
+      "paths": []
+    }
   },
   "commands": {
     "setup": null,
@@ -54,18 +66,57 @@
     "agentRetries": 1,
     "setupTimeoutSec": 900
   },
-  "ports": { "base": 5100, "stride": 10 },
-  "tools": { "gh": false, "browser": null, "docker": false },
+  "ports": {
+    "base": 5100,
+    "stride": 10
+  },
+  "tools": {
+    "gh": false,
+    "browser": null,
+    "docker": false
+  },
   "roles": {
-    "spec-writer": { "model": "opus" },
-    "builder": { "model": "opus" },
-    "approver": { "model": "opus" },
+    "spec-writer": {
+      "model": "opus"
+    },
+    "builder": {
+      "model": "opus"
+    },
+    "approver": {
+      "model": "opus"
+    },
     "reviewers": {
-      "code": { "enabled": true, "model": "sonnet", "reason": "universal" },
-      "security": { "enabled": true, "model": "opus", "reason": "universal" },
-      "ui-ux": { "enabled": false, "model": "sonnet", "mode": "static", "reason": "not initialized" },
-      "database": { "enabled": false, "model": "opus", "reason": "not initialized" },
-      "architecture": { "enabled": false, "model": "sonnet", "reason": "not initialized" }
+      "code": {
+        "enabled": true,
+        "model": "sonnet",
+        "reason": "universal"
+      },
+      "security": {
+        "enabled": true,
+        "model": "opus",
+        "reason": "universal"
+      },
+      "ui-ux": {
+        "enabled": false,
+        "model": "sonnet",
+        "mode": "static",
+        "reason": "not initialized"
+      },
+      "database": {
+        "enabled": false,
+        "model": "opus",
+        "reason": "not initialized"
+      },
+      "architecture": {
+        "enabled": false,
+        "model": "sonnet",
+        "reason": "not initialized"
+      }
     }
+  },
+  "qc": {
+    "autoReview": "needs-human",
+    "auditEvery": 5,
+    "model": "opus"
   }
 }

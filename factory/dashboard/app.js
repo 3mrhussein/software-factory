@@ -5,12 +5,14 @@ import { Header } from './components/Header.js';
 import { FilterBar } from './components/FilterBar.js';
 import { KanbanBoard } from './components/KanbanBoard.js';
 import { Drawer } from './components/Drawer.js';
+import { Insights } from './components/Insights.js';
 
 // #/job/<id>/<tab> deep links.
 function useHashRoute() {
   const parse = () => {
+    if (/^#\/insights/.test(location.hash)) return { view: 'insights', job: null, tab: 'overview' };
     const m = location.hash.match(/^#\/job\/([^/]+)(?:\/(\w+))?/);
-    return m ? { job: decodeURIComponent(m[1]), tab: m[2] || 'overview' } : { job: null, tab: 'overview' };
+    return m ? { view: 'board', job: decodeURIComponent(m[1]), tab: m[2] || 'overview' } : { view: 'board', job: null, tab: 'overview' };
   };
   const [route, setRoute] = useState(parse);
   useEffect(() => {
@@ -19,7 +21,7 @@ function useHashRoute() {
     return () => window.removeEventListener('hashchange', on);
   }, []);
   const go = (job, tab = 'overview') => {
-    const h = job ? `#/job/${encodeURIComponent(job)}/${tab}` : '#/';
+    const h = job === 'insights' ? '#/insights' : job ? `#/job/${encodeURIComponent(job)}/${tab}` : '#/';
     if (location.hash !== h) location.hash = h;
   };
   return [route, go];
@@ -127,9 +129,11 @@ function App() {
 
   return html`
     <div class="app">
-      <${Header} state=${state} mode=${mode} error=${error} />
+      <${Header} state=${state} mode=${mode} error=${error} view=${route.view} onView=${(v) => go(v === 'insights' ? 'insights' : null)} needsYou=${counts.human} />
       ${!state
         ? html`<div class="hero">${error ? html`<h2>Can't load factory state</h2><pre class="raw">${error}</pre><p>Serve the dashboard with <code>node factory/bin/factory-cli.js serve</code>, or run <code>python3 -m http.server</code> from <code>factory/</code>.</p>` : html`<div class="loading">Loading…</div>`}</div>`
+        : route.view === 'insights'
+        ? html`<${Insights} server=${server} version=${state.at} onOpenJob=${(id) => go(id)} />`
         : html`
           <${FilterBar} filters=${filters} setFilters=${setFilters} counts=${counts} lenses=${lenses} />
           ${!jobs.length ? html`<${EmptyState} state=${state} />` : null}

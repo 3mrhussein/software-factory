@@ -17,7 +17,7 @@ wins; flag the drift as a finding and fix this file.
 | Config | `factory/config.json` (+ `schema/config.schema.json`) | Commands, git, delivery, approval policy, loop limits, ports, tools, models, reviewer toggles. |
 | Init | `.claude/skills/factory-init` + `factory/lib/detect.js`, `init.js` | Detects the stack, writes config + FACTORY.md, toggles lenses. |
 | Dashboard | `factory/dashboard/` + `factory/lib/server.js` | Read-mostly view of jobs (React, no build). Can append/remove backlog items. |
-| QC | `.claude/skills/factory-qc` + `factory/lib/qc.js` + `factory/qc/` | You. Evidence, linting, proposals, journal. |
+| QC | `.claude/skills/factory-qc` (interactive) + `.claude/agents/factory-qc.md` (background) + `factory/lib/qc.js` + `factory/qc/` | Evidence, linting, assessments, proposals, journal; surfaced in the dashboard's Insights view. |
 
 ## 2. The loop (state machine)
 
@@ -37,6 +37,12 @@ plus `needs-human` and `cancelled`.
 Human entry points: `approve` (needs-human → deliver, works as an override),
 `rework --note` (writes `rework-k.md`, resets the budget, fresh builder),
 `cancel [--purge]`, `tick --retry` (re-dispatch after an interrupted session).
+
+QC follow-up: when a job ends (`delivered` or `needs-human`), tick/deliver
+attach a `followUp` (background `factory-qc` agent) per `config.qc`:
+`autoReview` (`off` | `needs-human` (default) | `all`) and `auditEvery`
+(audit every N deliveries; default 5). `job.qcRequested` makes each outcome
+reviewed once. The orchestrator launches it and doesn't wait.
 
 Budgets: `maxRounds = maxReworkRounds + 1` (default 3). `agentRetries`
 (default 1) per agent per round. The human rework resets `resumesUsed`.
@@ -76,6 +82,9 @@ tick ────────job.json (state) + brief (context) ───► eve
 | `decision.md` | approver (or CLI on budget exhaustion: contains "Written by factory-cli") | line 1 `DECISION: APPROVE\|ESCALATE`; first Rationale bullet = dashboard reason | tick |
 | `rework-k.md` | CLI from the human's note | — | builder |
 | `setup.log`, `diff.patch`, `diffstat.txt`, `pr-body.md`, `build.prev.md` | CLI | — | humans, dashboard, qc |
+| `factory/qc/assessments/<date>-<scope>.md` | factory-qc agent / skill | line 1 `HEALTH: GOOD\|WATCH\|ACT`; `Scope:`; `## Verdict` first line; findings `\| # \| high\|medium\|low \| …` | dashboard Insights (via `qc index`) |
+| `factory/qc/proposals/<date>-<slug>.md` | QC (draft) → human-approved | `Status:` `Type:` `Scope:` `Applied:`; `## Success metric` first line | dashboard, QC |
+| `factory/qc/journal.md` | `factory-cli qc journal` only | `## <date> · <status> · <slug>` | dashboard, QC |
 
 Severity rule: **CHANGES iff ≥1 blocker/major finding**; minor/nit never
 block. qc flags violations.
@@ -103,6 +112,7 @@ block. qc flags violations.
 | reviewer-database | same | opus | same | review-database.md |
 | reviewer-architecture | same | sonnet | same | review-architecture.md |
 | approver | same | opus | all of the above + sensitive paths list | decision.md |
+| factory-qc | same (background, never edits the factory) | `config.qc.model` (opus) | `qc brief`, reports, traces, all artifacts | qc/assessments/*.md (+ proposal drafts) |
 
 - `config.roles.*.model` overrides frontmatter at spawn time (`tick` passes `model`).
 - Lenses are toggled by `/factory-init` evidence: UI → ui-ux, DB/ORM/migrations → database, multi-package → architecture. Code + security are always on.

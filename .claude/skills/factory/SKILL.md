@@ -61,14 +61,22 @@ names aren't addressable) and wait for its result. If you have no such agent
 instead (same rules as spawn). The brief tells a fresh builder everything.
 
 **`run`**: run `command` with Bash. Use `timeout: timeoutMs` when present
-(setup can take minutes). Its JSON may already say `halt` (e.g. a failed
-merge). Otherwise tick again.
+(setup can take minutes). Its JSON may already be final (`done` after a
+delivery, `halt` after a failed merge), possibly with a `followUp`.
+Otherwise tick again.
 
 **`halt`**: the job needs a human. Tell the user the job id, the
 `attention` reason, the worktree path, and the `options`
 (`/factory approve|rework|cancel <job>`). Stop.
 
 **`done`**: report the outcome (merged commit or PR URL). Stop.
+
+**`followUp`** (may ride on a `halt` or `done` action, or on `deliver`'s
+output): a background quality-control run chosen by `config.qc`. Launch it
+with the Agent tool exactly as given (`subagent_type: factory-qc`,
+`run_in_background: true`), **don't wait for it**, and finish your report.
+When it completes, relay its one-line verdict
+(`QC: <HEALTH>: <verdict>`). The dashboard's Insights view shows it too.
 
 If the CLI exits non-zero, show its `error:` line to the user and stop. Don't
 work around it by editing files. If an agent fails or returns without

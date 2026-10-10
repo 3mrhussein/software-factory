@@ -15,7 +15,7 @@ const CODE = ['factory/bin', 'factory/lib', 'factory/schema', 'factory/dashboard
 // Copied when missing; on upgrade only with --force (repos may tailor them).
 const TAILORABLE = [
   'factory/templates', 'factory/README.md',
-  '.claude/skills/factory', '.claude/skills/factory-init', '.claude/skills/factory-qc', 'factory/qc/README.md',
+  '.claude/skills/factory', '.claude/skills/factory-init', '.claude/skills/factory-qc', 'factory/qc/README.md', 'factory/qc/.gitignore', '.claude/agents/factory-qc.md',
   ...['spec-writer', 'builder', 'approver', 'reviewer-code', 'reviewer-security', 'reviewer-ui-ux', 'reviewer-database', 'reviewer-architecture']
     .map((a) => `.claude/agents/${a}.md`),
 ];

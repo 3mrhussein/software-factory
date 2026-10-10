@@ -4,51 +4,160 @@
   "title": "Software Factory configuration",
   "description": "Written by /factory-init (through factory-cli), read by factory-cli and the dashboard. Never hand-edit while jobs are running; use `factory-cli config set`.",
   "type": "object",
-  "required": ["schemaVersion", "initialized", "project", "commands", "git", "delivery", "approval", "loop", "ports", "tools", "roles"],
+  "required": [
+    "schemaVersion",
+    "initialized",
+    "project",
+    "commands",
+    "git",
+    "delivery",
+    "approval",
+    "loop",
+    "ports",
+    "tools",
+    "roles"
+  ],
   "additionalProperties": false,
   "properties": {
-    "$schema": { "type": "string" },
-    "schemaVersion": { "const": 1 },
-    "initialized": { "type": "boolean" },
-    "initializedAt": { "type": ["string", "null"] },
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "initialized": {
+      "type": "boolean"
+    },
+    "initializedAt": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "project": {
       "type": "object",
-      "required": ["name", "languages", "packageManagers", "frameworks", "monorepo", "frontend", "database"],
+      "required": [
+        "name",
+        "languages",
+        "packageManagers",
+        "frameworks",
+        "monorepo",
+        "frontend",
+        "database"
+      ],
       "additionalProperties": false,
       "properties": {
-        "name": { "type": ["string", "null"] },
-        "summary": { "type": ["string", "null"] },
-        "languages": { "type": "array", "items": { "type": "string" } },
-        "packageManagers": { "type": "array", "items": { "type": "string" } },
-        "frameworks": { "type": "array", "items": { "type": "string" } },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "summary": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "packageManagers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "frameworks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "monorepo": {
           "type": "object",
-          "required": ["enabled", "tool", "packages"],
+          "required": [
+            "enabled",
+            "tool",
+            "packages"
+          ],
           "additionalProperties": false,
           "properties": {
-            "enabled": { "type": "boolean" },
-            "tool": { "type": ["string", "null"] },
-            "packages": { "type": "array", "items": { "type": "string" } }
+            "enabled": {
+              "type": "boolean"
+            },
+            "tool": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "packages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           }
         },
         "frontend": {
           "type": "object",
-          "required": ["kind", "frameworks", "paths"],
+          "required": [
+            "kind",
+            "frameworks",
+            "paths"
+          ],
           "additionalProperties": false,
           "properties": {
-            "kind": { "enum": ["none", "web", "mobile", "desktop"] },
-            "frameworks": { "type": "array", "items": { "type": "string" } },
-            "paths": { "type": "array", "items": { "type": "string" } }
+            "kind": {
+              "enum": [
+                "none",
+                "web",
+                "mobile",
+                "desktop"
+              ]
+            },
+            "frameworks": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           }
         },
         "database": {
           "type": "object",
-          "required": ["detected", "technologies", "paths"],
+          "required": [
+            "detected",
+            "technologies",
+            "paths"
+          ],
           "additionalProperties": false,
           "properties": {
-            "detected": { "type": "boolean" },
-            "technologies": { "type": "array", "items": { "type": "string" } },
-            "paths": { "type": "array", "items": { "type": "string" } }
+            "detected": {
+              "type": "boolean"
+            },
+            "technologies": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           }
         }
       }
@@ -56,121 +165,333 @@
     "commands": {
       "type": "object",
       "description": "Shell commands run from a worktree root. null = not available.",
-      "required": ["setup", "build", "test", "lint", "typecheck", "format", "dev"],
+      "required": [
+        "setup",
+        "build",
+        "test",
+        "lint",
+        "typecheck",
+        "format",
+        "dev"
+      ],
       "additionalProperties": false,
       "properties": {
-        "setup": { "type": ["string", "null"] },
-        "build": { "type": ["string", "null"] },
-        "test": { "type": ["string", "null"] },
-        "lint": { "type": ["string", "null"] },
-        "typecheck": { "type": ["string", "null"] },
-        "format": { "type": ["string", "null"] },
-        "dev": { "type": ["string", "null"], "description": "Dev server command; {port} is replaced with the job's port." }
+        "setup": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "build": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "test": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lint": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "typecheck": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "format": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dev": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Dev server command; {port} is replaced with the job's port."
+        }
       }
     },
     "git": {
       "type": "object",
-      "required": ["baseBranch", "remote", "branchPattern", "worktreeRoot", "commitStyle"],
+      "required": [
+        "baseBranch",
+        "remote",
+        "branchPattern",
+        "worktreeRoot",
+        "commitStyle"
+      ],
       "additionalProperties": false,
       "properties": {
-        "baseBranch": { "type": "string", "minLength": 1 },
-        "remote": { "type": ["string", "null"] },
-        "branchPattern": { "type": "string", "pattern": "\\{id\\}" },
-        "worktreeRoot": { "type": "string", "minLength": 1, "description": "Relative to the repo root. {repo} is the repo folder name." },
-        "commitStyle": { "enum": ["conventional", "free"] }
+        "baseBranch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "remote": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "branchPattern": {
+          "type": "string",
+          "pattern": "\\{id\\}"
+        },
+        "worktreeRoot": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Relative to the repo root. {repo} is the repo folder name."
+        },
+        "commitStyle": {
+          "enum": [
+            "conventional",
+            "free"
+          ]
+        }
       }
     },
     "delivery": {
       "type": "object",
-      "required": ["strategy"],
+      "required": [
+        "strategy"
+      ],
       "additionalProperties": false,
       "properties": {
-        "strategy": { "enum": ["direct-merge", "github-pr"] },
-        "draftPr": { "type": "boolean" },
-        "removeWorktreeAfterDelivery": { "type": "boolean" }
+        "strategy": {
+          "enum": [
+            "direct-merge",
+            "github-pr"
+          ]
+        },
+        "draftPr": {
+          "type": "boolean"
+        },
+        "removeWorktreeAfterDelivery": {
+          "type": "boolean"
+        }
       }
     },
     "approval": {
       "type": "object",
-      "required": ["mode", "escalatePaths"],
+      "required": [
+        "mode",
+        "escalatePaths"
+      ],
       "additionalProperties": false,
       "properties": {
-        "mode": { "enum": ["auto", "human"], "description": "human = every job stops at needs-human after the approver says APPROVE." },
-        "escalatePaths": { "type": "array", "items": { "type": "string" } },
-        "notes": { "type": "array", "items": { "type": "string" } }
+        "mode": {
+          "enum": [
+            "auto",
+            "human"
+          ],
+          "description": "human = every job stops at needs-human after the approver says APPROVE."
+        },
+        "escalatePaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "loop": {
       "type": "object",
-      "required": ["maxReworkRounds", "agentRetries"],
+      "required": [
+        "maxReworkRounds",
+        "agentRetries"
+      ],
       "additionalProperties": false,
       "properties": {
-        "maxReworkRounds": { "type": "integer", "minimum": 0, "maximum": 5 },
-        "agentRetries": { "type": "integer", "minimum": 0, "maximum": 3 },
-        "setupTimeoutSec": { "type": "integer", "minimum": 10 }
+        "maxReworkRounds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "agentRetries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "setupTimeoutSec": {
+          "type": "integer",
+          "minimum": 10
+        }
       }
     },
     "ports": {
       "type": "object",
-      "required": ["base", "stride"],
+      "required": [
+        "base",
+        "stride"
+      ],
       "additionalProperties": false,
       "properties": {
-        "base": { "type": "integer", "minimum": 1024, "maximum": 60000 },
-        "stride": { "type": "integer", "minimum": 2, "maximum": 100 }
+        "base": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 60000
+        },
+        "stride": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 100
+        }
       }
     },
     "tools": {
       "type": "object",
-      "required": ["gh", "browser"],
+      "required": [
+        "gh",
+        "browser"
+      ],
       "additionalProperties": false,
       "properties": {
-        "gh": { "type": "boolean" },
-        "browser": { "type": ["string", "null"], "description": "agent-browser | playwright | null" },
-        "docker": { "type": "boolean" }
+        "gh": {
+          "type": "boolean"
+        },
+        "browser": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "agent-browser | playwright | null"
+        },
+        "docker": {
+          "type": "boolean"
+        }
       }
     },
     "roles": {
       "type": "object",
-      "required": ["spec-writer", "builder", "approver", "reviewers"],
+      "required": [
+        "spec-writer",
+        "builder",
+        "approver",
+        "reviewers"
+      ],
       "additionalProperties": false,
       "properties": {
-        "spec-writer": { "$ref": "#/definitions/role" },
-        "builder": { "$ref": "#/definitions/role" },
-        "approver": { "$ref": "#/definitions/role" },
+        "spec-writer": {
+          "$ref": "#/definitions/role"
+        },
+        "builder": {
+          "$ref": "#/definitions/role"
+        },
+        "approver": {
+          "$ref": "#/definitions/role"
+        },
         "reviewers": {
           "type": "object",
           "description": "Review lenses. Agent = reviewer-<lens>, output = round-N/review-<lens>.md.",
-          "additionalProperties": { "$ref": "#/definitions/reviewer" },
+          "additionalProperties": {
+            "$ref": "#/definitions/reviewer"
+          },
           "properties": {
-            "code": { "$ref": "#/definitions/reviewer" },
-            "security": { "$ref": "#/definitions/reviewer" },
-            "ui-ux": { "$ref": "#/definitions/reviewer" },
-            "database": { "$ref": "#/definitions/reviewer" },
-            "architecture": { "$ref": "#/definitions/reviewer" }
+            "code": {
+              "$ref": "#/definitions/reviewer"
+            },
+            "security": {
+              "$ref": "#/definitions/reviewer"
+            },
+            "ui-ux": {
+              "$ref": "#/definitions/reviewer"
+            },
+            "database": {
+              "$ref": "#/definitions/reviewer"
+            },
+            "architecture": {
+              "$ref": "#/definitions/reviewer"
+            }
           }
+        }
+      }
+    },
+    "qc": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Background QC agent policy (optional; defaults: autoReview needs-human, auditEvery 5).",
+      "properties": {
+        "autoReview": {
+          "enum": [
+            "off",
+            "needs-human",
+            "all"
+          ],
+          "description": "Which finished jobs get a background post-mortem by the factory-qc agent."
+        },
+        "auditEvery": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Run a full audit every N delivered jobs (0 = never)."
+        },
+        "model": {
+          "$ref": "#/definitions/model"
         }
       }
     }
   },
   "definitions": {
-    "model": { "enum": ["opus", "sonnet", "haiku", "fable", "inherit"] },
+    "model": {
+      "enum": [
+        "opus",
+        "sonnet",
+        "haiku",
+        "fable",
+        "inherit"
+      ]
+    },
     "role": {
       "type": "object",
-      "required": ["model"],
+      "required": [
+        "model"
+      ],
       "additionalProperties": false,
       "properties": {
-        "model": { "$ref": "#/definitions/model" }
+        "model": {
+          "$ref": "#/definitions/model"
+        }
       }
     },
     "reviewer": {
       "type": "object",
-      "required": ["enabled", "model", "reason"],
+      "required": [
+        "enabled",
+        "model",
+        "reason"
+      ],
       "additionalProperties": false,
       "properties": {
-        "enabled": { "type": "boolean" },
-        "model": { "$ref": "#/definitions/model" },
-        "reason": { "type": "string" },
-        "mode": { "enum": ["browser", "static"], "description": "ui-ux only: browser when a browser CLI is installed." }
+        "enabled": {
+          "type": "boolean"
+        },
+        "model": {
+          "$ref": "#/definitions/model"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "mode": {
+          "enum": [
+            "browser",
+            "static"
+          ],
+          "description": "ui-ux only: browser when a browser CLI is installed."
+        }
       }
     }
   }

@@ -15,7 +15,7 @@ the loop's agents, and never edit `factory/jobs/`.
 
 ```
 CLI = node <repo>/factory/bin/factory-cli.js     (<repo> = git rev-parse --show-toplevel)
-QC  = <repo>/factory/qc/                         your memory: journal.md + proposals/
+QC  = <repo>/factory/qc/                         your memory: journal.md, assessments/, proposals/
 REF = this skill's references/ folder
 ```
 
@@ -75,11 +75,37 @@ Compare `qc report` for the period before vs. after the proposal's
 `applied` date on its stated metric. Record keep / tune / revert in the
 journal.
 
+## Your background half: the `factory-qc` agent
+`.claude/agents/factory-qc.md` is the same expertise running unattended:
+- The loop launches it automatically (`config.qc`): `autoReview`
+  (`off` | `needs-human` | `all`) post-mortems finished jobs, and
+  `auditEvery: N` audits the factory every N deliveries. Tune it with
+  `$CLI config set qc '{"autoReview":"all","auditEvery":5,"model":"opus"}'`.
+- It gets its context from `$CLI qc brief [--job <id>]`, writes a
+  HEALTH-rated assessment to `QC/assessments/`, may draft proposals, journals
+  them, and runs `$CLI qc index`. It never changes the factory.
+- For a long audit while you keep talking with the user, spawn it yourself
+  (Agent tool, `subagent_type: factory-qc`, background) and discuss its
+  assessment when it lands.
+- Its assessments are your starting evidence: read the latest ones before
+  re-investigating the same topic, and treat their proposals as drafts you
+  refine with the user.
+
+## The dashboard is your report surface
+`$CLI serve` → **Insights** shows what the user monitors: KPI tiles with
+trends, throughput and first-pass charts, reviewer pushback, needs-human
+causes, stage times, artifact sizes, hotspots, your assessments (HEALTH
+badges), proposals by status, signals, contract violations and the journal.
+Everything there comes from `qc report`, `qc series` and `qc index`, so keep
+assessments, proposals and journal entries in their formats or they won't
+show. After writing any QC file, run `$CLI qc index`.
+
 ## Proposals
 One file per change: `QC/proposals/<YYYY-MM-DD>-<slug>.md`, in the format in
 `REF/change-playbook.md` (problem + evidence, hypothesis, exact change as a
 diff or precise edit list, blast radius, risks, success metric, rollback).
-Add a line to `QC/journal.md` with status `proposed`. Show the user the
+Add a journal line with `$CLI qc journal proposed <slug> "<summary>"`
+(never hand-edit the journal), then `$CLI qc index`. Show the user the
 summary and ask for approval; don't apply in the same breath.
 
 ## Ground rules

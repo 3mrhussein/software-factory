@@ -51,6 +51,10 @@ Quality control (used by /factory-qc)
   qc report [--since <days>] [--json]   process metrics + heuristic signals from all jobs
   qc trace <job>                        one job's timeline, findings and artifact sizes
   qc check                              lint agents, skills, templates, config contracts
+  qc series [--since <days>]            time series for growth charts
+  qc brief [--job <job>]                context + template for the factory-qc agent
+  qc journal <status> <slug> "<text>"   append to factory/qc/journal.md
+  qc index                              refresh qc/index.json + report.json (dashboard)
 
 Dashboard & distribution
   serve [--port 4317] [--host 127.0.0.1]   live dashboard at /dashboard/
@@ -321,6 +325,10 @@ async function main() {
         return out(flags.json ? r : JSON.stringify(r, null, 2));
       }
       if (sub === 'trace') return out(qc.trace(id));
+      if (sub === 'series') return out(qc.series({ sinceDays: flags.since ? Number(flags.since) : undefined }));
+      if (sub === 'brief') return out(qc.brief({ job: typeof flags.job === 'string' ? flags.job : undefined }));
+      if (sub === 'journal') return out(qc.journal(args[1], args[2], args.slice(3).join(' ')));
+      if (sub === 'index') return out(qc.writeIndex());
       if (sub === 'check') {
         const res = qc.check();
         if (flags.json) return out(res);
@@ -329,7 +337,7 @@ async function main() {
         if (!res.ok) process.exitCode = 1;
         return;
       }
-      return die('usage: qc report [--since days] | qc trace <job> | qc check');
+      return die('usage: qc report | trace <job> | check | series | brief [--job j] | journal <status> <slug> <text> | index');
     }
 
     // ------------------------------------------------------------ dashboard

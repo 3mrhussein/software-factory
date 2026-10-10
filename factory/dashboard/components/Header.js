@@ -25,7 +25,7 @@ function ThemeToggle() {
   return html`<button class="icon-btn theme" onClick=${cycle} title=${`Theme: ${theme}`} aria-label=${`Theme: ${theme}. Click to change.`}>${icon}</button>`;
 }
 
-export function Header({ state, mode, error }) {
+export function Header({ state, mode, error, view, onView, needsYou }) {
   const cfg = state && state.config;
   const reviewers = cfg ? Object.entries(cfg.roles.reviewers) : [];
   const stack = cfg ? [...(cfg.project.languages || []), ...(cfg.project.frameworks || [])].slice(0, 6) : [];
@@ -39,6 +39,10 @@ export function Header({ state, mode, error }) {
           <div class="repo">${state ? state.repo : '…'}${stack.length ? html` · <span class="muted">${stack.join(' · ')}</span>` : null}</div>
         </div>
       </div>
+      <nav class="viewnav" aria-label="View">
+        <button class=${view !== 'insights' ? 'on' : ''} aria-current=${view !== 'insights' ? 'page' : undefined} onClick=${() => onView('board')}>Board${needsYou ? html`<span class="nav-badge" title="Jobs that need you">${needsYou}</span>` : null}</button>
+        <button class=${view === 'insights' ? 'on' : ''} aria-current=${view === 'insights' ? 'page' : undefined} onClick=${() => onView('insights')}>Insights</button>
+      </nav>
       <div class="roster" aria-label="Reviewer roster">
         ${reviewers.map(([l, r]) => html`
           <span key=${l} class=${`role ${r.enabled ? 'role-on' : 'role-off'}`} title=${`${lensLong(l)}: ${r.enabled ? 'active' : 'inactive'}. ${r.reason}${l === 'ui-ux' && r.enabled ? ` (${r.mode} mode)` : ''}`}>
