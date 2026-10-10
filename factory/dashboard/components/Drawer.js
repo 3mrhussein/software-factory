@@ -3,7 +3,8 @@ import { ReviewerChips } from './ReviewerChips.js';
 import { JobFile } from './Markdown.js';
 import { DiffView } from './DiffView.js';
 import { STAGE_LABEL, lensLong, timeAgo, duration, activity } from '../lib/model.js';
-import { listFiles } from '../lib/api.js';
+import { listFiles, useQc } from '../lib/api.js';
+import { HealthBadge } from './Insights.js';
 
 const TABS = ['overview', 'spec', 'build', 'reviews', 'decision', 'diff', 'files'];
 const TAB_LABEL = { overview: 'Overview', spec: 'Spec', build: 'Build', reviews: 'Reviews', decision: 'Decision', diff: 'Diff', files: 'Files' };
@@ -36,7 +37,14 @@ function RoundsGrid({ job, onPick }) {
     </table>`;
 }
 
-function Overview({ job, now, onPickReview }) {
+function QcVerdict({ job, server }) {
+  const { data } = useQc({ server, version: job.updatedAt });
+  const a = data && data.index.assessments.find((x) => x.job === job.id);
+  if (!a) return null;
+  return html`<div class="callout callout-qc"><${HealthBadge} health=${a.health} /><div><strong>QC post-mortem</strong><p>${a.verdict || a.title}</p><span class="muted small">factory/qc/${a.file} · ${a.date}</span></div></div>`;
+}
+
+function Overview({ job, now, onPickReview, server }) {
   const act = activity(job);
   const facts = [
     ['Stage', STAGE_LABEL[job.stage]],
@@ -61,6 +69,7 @@ function Overview({ job, now, onPickReview }) {
           </div>
           <p class="muted small">Worktree: <code>${job.worktree}</code></p>
         </div>` : null}
+      <${QcVerdict} job=${job} server=${server} />
       ${act ? html`<div class="callout callout-live"><span class="pulse"></span>${act}</div>` : null}
       <dl class="facts">
         ${facts.map(([k, v]) => html`<div key=${k}><dt>${k}</dt><dd>${v}</dd></div>`)}
@@ -151,7 +160,7 @@ export function Drawer({ job, server, tab, setTab, onClose, now }) {
         </nav>
       </header>
       <div class="drawer-body">
-        ${active === 'overview' ? html`<${Overview} job=${job} now=${now} onPickReview=${onPickReview} />` : null}
+        ${active === 'overview' ? html`<${Overview} job=${job} now=${now} onPickReview=${onPickReview} server=${server} />` : null}
         ${active === 'spec' ? html`<${JobFile} job=${job} path="spec.md" server=${server} version=${version} empty="The spec-writer has not finished yet." />` : null}
         ${active === 'build' ? html`<${JobFile} job=${job} path="build.md" server=${server} version=${version} empty=${job.round ? 'The builder is working on the next round. Earlier build reports are under Reviews.' : 'The builder has not finished yet.'} />` : null}
         ${active === 'reviews' ? html`<${Reviews} job=${job} server=${server} version=${version} pick=${pick} setPick=${setPick} />` : null}

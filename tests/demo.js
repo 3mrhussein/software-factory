@@ -77,6 +77,64 @@ f(root, 'record', id, 'ui-ux');
 advance('Add wishlist sharing via link', 'build');
 advance('Rate limit the login endpoint', 'spec');
 
+// ---- 30 days of synthetic history so the Insights charts have a story.
+// Fixture-only: writes job.json directly (schema-checked by `validate` below).
+const DAY = 86400000;
+const lensesAll = ['code', 'security', 'ui-ux', 'database'];
+const features = ['Coupon codes at checkout', 'Saved addresses', 'Order history pagination', 'Product image zoom', 'Low-stock badge',
+  'Email receipts', 'Search autocomplete', 'Guest checkout', 'Return requests', 'Size guide modal', 'Bulk price update', 'Reorder button',
+  'Stock alerts', 'Recently viewed', 'Gift wrapping option', 'Loyalty points', 'Shipping estimator', 'Abandoned cart email'];
+features.forEach((feature, k) => {
+  const created = Date.now() - (29 - Math.floor((k * 28) / features.length)) * DAY - 3 * 3600000;
+  const iso = (ms) => new Date(created + ms).toISOString();
+  const early = k < 7;
+  const rounds = early ? (k % 3 === 0 ? 3 : 2) : (k % 4 === 0 ? 2 : 1);
+  const escalated = k === 3 || k === 11;
+  const { job: hid } = f(root, 'job', 'new', feature);
+  const jf = path.join(jobDir(root, hid), 'job.json');
+  const job = JSON.parse(fs.readFileSync(jf, 'utf8'));
+  const history = [{ at: iso(0), stage: 'setup', note: `created: ${feature}` }, { at: iso(60000), stage: 'spec', note: 'spec-writer started' }, { at: iso(6 * 60000), stage: 'build', note: 'builder started (initial)' }];
+  let t = 30 * 60000;
+  job.rounds = [];
+  for (let n = 1; n <= rounds; n++) {
+    const last = n === rounds;
+    const verdicts = {};
+    lensesAll.forEach((l, i) => {
+      const changes = !last && ((early && (l === 'security' || l === 'ui-ux')) || (!early && i === k % 4));
+      verdicts[l] = changes ? 'CHANGES' : 'PASS';
+      review(hid, n, l, verdicts[l], changes ? 'Needs work.' : 'Fine.');
+    });
+    write(path.join(jobDir(root, hid), `round-${n}`, 'build.md'), 'STATUS: READY\n\n# Build\n');
+    history.push({ at: iso(t), stage: 'review', round: n, note: `round ${n} started` });
+    job.rounds.push({ n, verdicts, startedAt: iso(t), endedAt: iso(t + 9 * 60000) });
+    t += 25 * 60000;
+    if (!last) history.push({ at: iso(t - 10 * 60000), stage: 'build', round: n, note: 'builder started (resume)' });
+  }
+  spec(hid, feature);
+  Object.assign(job, { round: rounds, resumesUsed: rounds - 1, reviews: job.rounds[rounds - 1].verdicts, awaiting: [], createdAt: iso(0), setupDone: true, build: 'READY' });
+  if (escalated) {
+    write(path.join(jobDir(root, hid), 'decision.md'), 'DECISION: ESCALATE\n\n# Decision\n\n## Rationale\n- Touches the payments adapter.\n');
+    history.push({ at: iso(t), stage: 'needs-human', round: rounds, note: 'needs human: approver escalated: Touches the payments adapter.' });
+    history.push({ at: iso(t + 3 * 3600000), stage: 'deliver', round: rounds, note: 'human approved (override)' });
+    t += 3 * 3600000;
+    job.humanApproved = true;
+  } else write(path.join(jobDir(root, hid), 'decision.md'), 'DECISION: APPROVE\n\n# Decision\n\n## Rationale\n- All ACs evidenced.\n');
+  history.push({ at: iso(t + 2 * 60000), stage: 'delivered', round: rounds, note: 'merged into main' });
+  Object.assign(job, { stage: 'delivered', decision: escalated ? 'ESCALATE' : 'APPROVE', delivery: { strategy: 'direct-merge', status: 'merged', prUrl: null, mergeCommit: 'abc1234def5678', at: iso(t + 2 * 60000) }, history, updatedAt: iso(t + 2 * 60000) });
+  fs.writeFileSync(jf, JSON.stringify(job, null, 2));
+});
+f(root, 'validate');
+
+// ---- QC memory: an audit, a post-mortem, proposals and journal lines.
+const qcd = path.join(root, 'factory/qc');
+write(path.join(qcd, 'assessments', `${new Date().toISOString().slice(0, 10)}-audit.md`), `HEALTH: WATCH\n\n# QC assessment: Factory audit\nScope: audit\nDate: ${new Date().toISOString().slice(0, 10)}\n\n## Verdict\nFirst-pass rate doubled since UI focus was added; security still drives most rework.\n\n## Evidence\n| Metric / artifact | Value | Source |\n| - | - | - |\n| first-pass rate | 0% → 64% | qc report |\n\n## Findings\n| # | Severity | Area | Finding | Recommendation |\n| - | - | - | - | - |\n| 1 | high | agent | Builder never validates cart quantities (7 security CHANGES) | Add input-validation item to FACTORY.md security focus so the builder sees it |\n| 2 | medium | template | Reviews average 1.4k tokens | Cap Summary to 2 sentences |\n`);
+write(path.join(qcd, 'assessments', `${new Date().toISOString().slice(0, 10)}-job-002-store-order-notes-order.md`), `HEALTH: ACT\n\n# QC assessment: Job 002-store-order-notes-order\nScope: job 002-store-order-notes-order\nDate: ${new Date().toISOString().slice(0, 10)}\n\n## Verdict\nEscalation was correct: the migration rewrites a 40M-row table; spec-writer should have flagged it.\n\n## Findings\n| # | Severity | Area | Finding | Recommendation |\n| - | - | - | - | - |\n| 1 | high | agent | spec missed migration risk | spec-writer: list schema changes under Constraints & risks |\n`);
+write(path.join(qcd, 'proposals', '2026-09-20-ui-focus-in-profile.md'), '# Add UI states checklist to FACTORY.md\nStatus: measured\nType: profile\nScope: this repo\nApplied: 2026-09-20\n\n## Success metric & check-back\nui-ux CHANGES rate below 20% after 8 jobs\n');
+write(path.join(qcd, 'proposals', `${new Date().toISOString().slice(0, 10)}-security-input-validation.md`), '# Teach the builder input validation up front\nStatus: proposed\nType: profile\nScope: this repo\n\n## Success metric & check-back\nsecurity CHANGES rate below 25% after 10 jobs\n');
+f(root, 'qc', 'journal', 'applied', 'ui-focus-in-profile', 'Added UI states checklist.');
+f(root, 'qc', 'journal', 'measured', 'ui-focus-in-profile', 'ui-ux CHANGES 71% → 12%. Keep.');
+f(root, 'qc', 'journal', 'proposed', 'security-input-validation', 'Builder misses quantity validation.');
+
 f(root, 'backlog', 'add', 'Gift cards at checkout');
 f(root, 'backlog', 'add', 'Dark mode for the storefront');
 
@@ -85,5 +143,5 @@ fs.rmSync(path.join(root, 'factory/dashboard'), { recursive: true, force: true }
 fs.symlinkSync(path.join(__dirname, '..', 'factory', 'dashboard'), path.join(root, 'factory/dashboard'));
 
 console.log(`demo repo: ${root}`);
-const { serve } = require(path.join(root, 'factory/lib/server.js'));
+const { serve } = require(path.join(root, 'factory/lib/server.js')); // the demo's own copy: paths resolve to the demo repo
 serve({ port }).then(({ url }) => console.log(`dashboard: ${url}`));

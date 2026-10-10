@@ -92,17 +92,17 @@ function deliver(idOrNum) {
     if (!result.ok) {
       job.delivery = { strategy: cfg.delivery.strategy, status: 'failed', prUrl: null, mergeCommit: null, at: now() };
       jobs.needsHuman(job, result.reason, `delivery failed: ${result.reason}`);
-      return { job: id, action: 'halt', stage: job.stage, say: `${id}: delivery failed: ${result.reason}`, attention: result.reason };
+      return require('./tick').withFollowUp({ job: id, action: 'halt', stage: job.stage, say: `${id}: delivery failed: ${result.reason}`, attention: result.reason }, job, cfg);
     }
     job.delivery = result.delivery;
     job.stage = 'delivered';
     job.awaiting = [];
     jobs.save(job, result.delivery.status === 'merged' ? `merged into ${job.baseBranch}` : `PR opened: ${result.delivery.prUrl}`);
     const notes = result.cleanup?.notes || [];
-    return {
+    return require('./tick').withFollowUp({
       job: id, action: 'done', stage: job.stage, delivery: job.delivery, cleanup: result.cleanup,
       say: `${id}: ${result.delivery.status === 'merged' ? `merged into ${job.baseBranch}` : `PR ${result.delivery.prUrl}`}${notes.length ? ` (cleanup: ${notes.join('; ')})` : ''}`,
-    };
+    }, job, cfg);
   });
 }
 

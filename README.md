@@ -72,6 +72,7 @@ manual choices.
 | `/factory cancel <job>` | Stops a job (`--purge` also deletes its worktree and branch) |
 | `/factory prune` | Removes worktrees of finished jobs |
 | `/factory dashboard` | Starts the live dashboard |
+| `/factory-qc` | Quality-control expert: audits, post-mortems, evaluates skills you bring (see below) |
 
 `<job>` is the full id (`004-rate-limit-login`) or just its number (`4`).
 
@@ -97,12 +98,63 @@ node factory/bin/factory-cli.js serve          # http://127.0.0.1:4317/dashboard
   file. Deep links: `#/job/<id>/<tab>`.
 - Search, view filters (Active / Needs you / Done), "changes requested by"
   filter, backlog editing, light/dark themes, mobile layout.
+- **Insights** tab: KPIs, growth charts and QC verdicts (see Quality control).
 
 No build step and no `npm install`: React 18 + [htm](https://github.com/developit/htm)
 load as plain scripts from a pinned CDN. For offline/air-gapped use, run
 `node factory/bin/factory-cli.js vendor` once (downloads the four pinned files
 into `factory/dashboard/vendor/`) and commit them. Any static server also
 works in read-only mode: `cd factory && python3 -m http.server`.
+
+## Quality control: a background agent, an expert skill, and Insights
+
+QC has two halves sharing one knowledge base (architecture, state machine,
+file contracts, how agents hand work to each other, invariants, extension
+points, cost model):
+
+- **`factory-qc` agent** (`.claude/agents/factory-qc.md`): runs unattended.
+  When a job ends, the loop launches it in the background according to
+  `config.qc`. By default it post-mortems every job that needed you and
+  audits the whole factory every 5 deliveries. It writes a
+  **HEALTH-rated assessment** (GOOD / WATCH / ACT) with evidence, findings
+  and draft proposals. It never changes the factory.
+- **`/factory-qc` skill**: the expert you talk to.
+
+| You say | It does |
+| --- | --- |
+| `/factory-qc` | Audits from evidence: `qc check` → `qc report` → the artifacts behind each signal → ranked, evidence-cited proposals |
+| `/factory-qc job 7` | Post-mortem of one job |
+| `/factory-qc skill <path/url/paste>` | Intake of a skill another developer used: safety scan, essence, 40-point rubric, **which agent and mechanism** (FACTORY.md focus, agent prompt, preloaded `skills:`, new lens, template, CLI), pros/cons, whole-loop impact and token cost, adapted version |
+| `/factory-qc propose <idea>` | Traces an idea through every stage and contract and writes a proposal |
+| `/factory-qc apply <proposal>` | Applies an approved proposal, verifies with `qc check` (+ tests), journals it |
+| `/factory-qc impact <proposal>` | Before/after metrics: keep, tune or revert |
+
+- **Insights** (dashboard → *Insights* tab): range filter (7/30/90 days/all);
+  the latest QC verdict; KPI tiles with trend sparklines (delivered,
+  first-pass rate, rounds per job, autonomy, lead time, needs-you); animated
+  charts that grow with the system (cumulative throughput, rolling first-pass
+  rate, reviewer pushback by lens, why humans were needed, time per stage,
+  artifact size ≈ tokens, hotspots), each with a table view; the QC
+  assessment feed, proposals by status, signals, contract violations and
+  the journal. Job drawers show that job's QC post-mortem. Updates live.
+
+Tune the background agent:
+
+```bash
+node factory/bin/factory-cli.js config set qc '{"autoReview":"all","auditEvery":5,"model":"opus"}'   # or "needs-human" / "off"
+```
+
+QC memory lives in `factory/qc/` (`assessments/`, `proposals/`, `journal.md`).
+Commit it. It's the history of how your factory was tuned and why.
+
+Evidence tools you can also run directly:
+
+```bash
+node factory/bin/factory-cli.js qc report --since 30   # process metrics + signals
+node factory/bin/factory-cli.js qc trace 7             # one job, step by step
+node factory/bin/factory-cli.js qc check               # agents ↔ config ↔ templates ↔ skills lint
+node factory/bin/factory-cli.js qc index               # refresh qc/index.json + report.json (static dashboards)
+```
 
 ---
 
@@ -154,6 +206,7 @@ setup.log, diff.patch, pr-body.md        CLI artefacts
 | `reviewer-database` | a schema, ORM, migrations or DB rules exist | opus |
 | `reviewer-architecture` | monorepo / multi-package workspace | sonnet |
 | `approver` | always | opus |
+| `factory-qc` | background, per `config.qc` (outside the loop) | opus |
 
 Override anything:
 
@@ -165,6 +218,11 @@ node factory/bin/factory-cli.js roles model reviewer-code opus
 ```
 
 Toggles apply to new jobs; each job freezes its reviewer list at creation.
+
+**Giving an agent a skill**: add `skills: [<name>]` to its frontmatter to
+preload `.claude/skills/<name>/SKILL.md` at spawn (agents can't load skills
+on demand; `Skill` isn't in their tool allowlists). Let `/factory-qc skill …`
+decide which agent and whether a lighter mechanism is enough.
 
 **Adding your own lens**: create `.claude/agents/reviewer-<lens>.md` (copy
 an existing reviewer), then
@@ -200,6 +258,7 @@ change it with `factory-cli config set <path> <value>`):
 | `loop.maxReworkRounds`, `loop.agentRetries`, `loop.setupTimeoutSec` | Loop limits |
 | `ports.base`, `ports.stride` | Per-job dev-server ports (job n → base + stride·n) |
 | `roles.*` | Models and reviewer toggles |
+| `qc.autoReview`, `qc.auditEvery`, `qc.model` | When the background QC agent runs |
 
 `factory/FACTORY.md` is the human-readable repo profile every agent reads:
 an auto-generated block (stack, commands, git, active reviewers) plus sections
@@ -218,7 +277,8 @@ node factory/bin/factory-cli.js help
 .claude/
   skills/factory/SKILL.md          /factory: orchestrator (executes tick actions)
   skills/factory-init/SKILL.md     /factory-init: investigate, configure, toggle roles
-  agents/*.md                      8 agents (spec-writer, builder, 5 reviewers, approver)
+  skills/factory-qc/               /factory-qc: QC lead + references/ knowledge base
+  agents/*.md                      9 agents (spec-writer, builder, 5 reviewers, approver, factory-qc)
 factory/
   bin/factory-cli.js               the CLI (zero dependencies)
   lib/                             detect, tick state machine, worktrees, delivery, server…
@@ -228,6 +288,7 @@ factory/
   config.json                      defaults until /factory-init runs
   backlog.md                       feature queue for /factory next
   jobs/                            runtime state (gitignored)
+  qc/                              QC journal + proposals (committed)
 tests/                             end-to-end tests + demo board (not installed)
 ```
 

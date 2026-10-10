@@ -378,3 +378,107 @@ test('dashboard server: state, files, diff, path traversal, backlog write, SSE',
     srv.close();
   }
 });
+
+test('qc: report aggregates verdicts, findings, contract violations; trace and check work', () => {
+  const root = initRepo();
+  f(root, 'roles', 'disable', 'ui-ux');
+  f(root, 'roles', 'disable', 'database');
+  sh('git add -A && git commit -qm cfg', root);
+  const { job: id } = f(root, 'job', 'new', 'Add export button');
+  f(root, 'tick', id);
+  fake.spec(root, id);
+  f(root, 'tick', id);
+  const job = f(root, 'job', 'show', id);
+  fake.build(root, job);
+  f(root, 'tick', id);
+  const table = (rows) => `\n## Findings\n| # | Severity | Location | Issue | Required change |\n| - | - | - | - | - |\n${rows}\n`;
+  write(path.join(jobDir(root, id), 'round-1', 'review-code.md'), `VERDICT: CHANGES\n${table('| 1 | major | `src/export.ts:10` | no tests | add tests |')}`);
+  write(path.join(jobDir(root, id), 'round-1', 'review-security.md'), `VERDICT: CHANGES\n${table('| 1 | nit | `src/export.ts:3` | naming | rename |')}`);
+  f(root, 'tick', id);
+  fake.build(root, job, { file: 'b.txt' });
+  f(root, 'tick', id);
+  for (const l of ['code', 'security']) fake.review(root, id, 2, l, 'PASS');
+  f(root, 'tick', id);
+  fake.decide(root, id, 'APPROVE');
+  f(root, 'tick', id);
+  f(root, 'deliver', id);
+
+  const r = f(root, 'qc', 'report', '--json');
+  assert.equal(r.jobs.total, 1);
+  assert.equal(r.flow.delivered, 1);
+  assert.equal(r.flow.avgRounds, 2);
+  assert.equal(r.flow.firstPassRatePct, 0);
+  assert.equal(r.lenses.code.changes, 1);
+  assert.equal(r.lenses.code.findings.major, 1);
+  assert.deepEqual(r.hotspots, [{ file: 'src/export.ts', blockingFindings: 1 }]);
+  assert.equal(r.contractViolations.length, 1);
+  assert.match(r.contractViolations[0], /security: CHANGES without a blocker\/major/);
+  assert.equal(r.approver.APPROVE, 1);
+
+  const t = f(root, 'qc', 'trace', id);
+  assert.match(t, /R1: code=CHANGES security=CHANGES/);
+  assert.match(t, /code major: src\/export\.ts:10: no tests/);
+
+  assert.match(f(root, 'qc', 'check'), /qc check: ok/);
+  fs.writeFileSync(path.join(root, 'factory/templates/review.md'), 'Verdict: pass\n');
+  fs.writeFileSync(path.join(root, '.claude/agents/reviewer-perf.md'), '---\nname: reviewer-perf\ntools: Read, Write, Bash\nskills:\n  - perf-budget\n---\nrun brief\n');
+  const res = require('child_process').spawnSync('node', [path.join(root, 'factory/bin/factory-cli.js'), 'qc', 'check', '--json'], { encoding: 'utf8' });
+  const checks = JSON.parse(res.stdout).checks;
+  assert.ok(checks.some((c) => c.level === 'error' && /review\.md/.test(c.item)), 'broken marker detected');
+  assert.ok(checks.some((c) => c.level === 'warn' && /reviewer-perf/.test(c.item) && /never run/.test(c.detail)), 'orphan lens agent detected');
+});
+
+test('qc agent: follow-up policy, brief, journal, index', () => {
+  const root = initRepo();
+  for (const l of ['ui-ux', 'database', 'security']) f(root, 'roles', 'disable', l);
+  f(root, 'config', 'set', 'qc', '{"autoReview":"needs-human","auditEvery":2,"model":"sonnet"}');
+  sh('git add -A && git commit -qm cfg', root);
+  const run = (feature, outcome) => {
+    const { job: id } = f(root, 'job', 'new', feature);
+    f(root, 'tick', id);
+    fake.spec(root, id);
+    f(root, 'tick', id);
+    fake.build(root, f(root, 'job', 'show', id), { file: `${id}.txt`, status: outcome === 'blocked' ? 'BLOCKED' : 'READY' });
+    const a = f(root, 'tick', id);
+    if (outcome === 'blocked') return { id, a };
+    fake.review(root, id, 1, 'code', 'PASS');
+    f(root, 'tick', id);
+    fake.decide(root, id, 'APPROVE');
+    f(root, 'tick', id);
+    return { id, a: f(root, 'deliver', id) };
+  };
+  const blocked = run('Blocked thing', 'blocked');
+  assert.equal(blocked.a.action, 'halt');
+  assert.equal(blocked.a.followUp.subagent_type, 'factory-qc');
+  assert.equal(blocked.a.followUp.run_in_background, true);
+  assert.equal(blocked.a.followUp.model, 'sonnet');
+  assert.match(blocked.a.followUp.prompt, new RegExp(`qc brief --job ${blocked.id}`));
+  assert.equal(f(root, 'tick', blocked.id).followUp, undefined, 'same outcome is reviewed once');
+
+  const d1 = run('First delivery', 'deliver');
+  assert.equal(d1.a.followUp, undefined, 'delivered jobs are not post-mortemed under needs-human policy');
+  const d2 = run('Second delivery', 'deliver');
+  assert.match(d2.a.followUp.prompt, /Factory audit after 2 delivered jobs/);
+
+  const brief = f(root, 'qc', 'brief', '--job', blocked.id);
+  assert.match(brief, /post-mortem of/);
+  assert.match(brief, /OUTPUT: write exactly .*assessments\/\d{4}-\d{2}-\d{2}-job-/);
+  assert.match(brief, /^HEALTH: GOOD/m);
+
+  write(path.join(root, 'factory/qc/assessments/2026-10-10-job-x.md'), `HEALTH: ACT\n\n# QC assessment: Job ${blocked.id}\nScope: job ${blocked.id}\nDate: 2026-10-10\n\n## Verdict\nSpec lacked the API decision.\n\n## Findings\n| # | Severity | Area | Finding | Recommendation |\n| - | - | - | - | - |\n| 1 | high | agent | x | y |\n`);
+  write(path.join(root, 'factory/qc/proposals/2026-10-10-spec-api.md'), '# Ask for API decisions in specs\nStatus: proposed\nType: prompt\n\n## Success metric & check-back\nBLOCKED rate below 5%\n');
+  f(root, 'qc', 'journal', 'proposed', 'spec-api', 'Spec-writer should surface API decisions.');
+  assert.match(fail(root, 'qc', 'journal', 'maybe', 'x', 'y'), /journal status/);
+  assert.deepEqual(f(root, 'qc', 'index'), { assessments: 1, proposals: 1, journal: 1 });
+  const idx = JSON.parse(fs.readFileSync(path.join(root, 'factory/qc/index.json'), 'utf8'));
+  assert.equal(idx.assessments[0].health, 'ACT');
+  assert.equal(idx.assessments[0].job, blocked.id);
+  assert.equal(idx.assessments[0].verdict, 'Spec lacked the API decision.');
+  assert.equal(idx.assessments[0].findings.high, 1);
+  assert.equal(idx.proposals[0].status, 'proposed');
+  assert.equal(idx.proposals[0].metric, 'BLOCKED rate below 5%');
+  assert.ok(fs.existsSync(path.join(root, 'factory/qc/report.json')));
+  const series = f(root, 'qc', 'series');
+  assert.equal(series.unit, 'day');
+  assert.equal(series.points[series.points.length - 1].cumDelivered, 2);
+});

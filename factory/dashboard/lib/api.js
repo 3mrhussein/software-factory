@@ -135,3 +135,27 @@ export async function removeBacklogItem(index) {
   const res = await fetch(`${ROOT}api/backlog/${index}`, { method: 'DELETE' });
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
 }
+
+// QC data: live from the server (filtered by range), or the snapshot that
+// `factory-cli qc index` writes for static hosting.
+export function useQc({ server, since, version, enabled = true }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  useEffect(() => {
+    if (!enabled) return;
+    let alive = true;
+    const load = server
+      ? getJSON(`${ROOT}api/qc${since ? `?since=${since}` : ''}`)
+      : Promise.all([getJSON(`${ROOT}qc/report.json`), getJSON(`${ROOT}qc/index.json`).catch(() => ({ assessments: [], proposals: [], journal: [] }))])
+        .then(([r, index]) => ({ ...r, index, since: null, snapshot: true }));
+    load.then((d) => alive && (setData(d), setError(null))).catch((e) => alive && setError(e.message));
+    return () => {
+      alive = false;
+    };
+  }, [server, since, version, enabled]);
+  return { data, error };
+}
+
+export function readQcFile(path, server) {
+  return server ? getText(`${ROOT}api/qc/file?path=${encodeURIComponent(path)}`) : getText(`${ROOT}qc/${path}`);
+}

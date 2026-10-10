@@ -3,7 +3,7 @@ import { renderMarkdown } from '../lib/markdown.js';
 import { readFile } from '../lib/api.js';
 import { splitMarker } from '../lib/model.js';
 
-const MARKER_CLASS = { PASS: 'pass', CHANGES: 'changes', READY: 'pass', BLOCKED: 'changes', APPROVE: 'pass', ESCALATE: 'changes' };
+const MARKER_CLASS = { PASS: 'pass', CHANGES: 'changes', READY: 'pass', BLOCKED: 'changes', APPROVE: 'pass', ESCALATE: 'changes', GOOD: 'pass', WATCH: 'changes', ACT: 'critical' };
 
 export function Markdown({ text }) {
   const { marker, body } = splitMarker(text);

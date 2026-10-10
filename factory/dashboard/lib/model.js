@@ -67,6 +67,6 @@ export function candidateFiles(job) {
 }
 
 export function splitMarker(text) {
-  const m = (text || '').match(/^\s*(VERDICT|STATUS|DECISION)\s*:\s*([A-Z-]+)\s*\n?/i);
+  const m = (text || '').match(/^\s*(VERDICT|STATUS|DECISION|HEALTH)\s*:\s*([A-Z-]+)\s*\n?/i);
   return m ? { marker: m[2].toUpperCase(), body: text.slice(m[0].length) } : { marker: null, body: text || '' };
 }

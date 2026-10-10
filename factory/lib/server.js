@@ -70,6 +70,9 @@ function signature() {
   };
   stamp(paths().config);
   stamp(paths().backlog);
+  const qcDir = path.join(paths().factory, 'qc');
+  stamp(path.join(qcDir, 'journal.md'));
+  for (const sub of ['assessments', 'proposals']) for (const f of listFiles(path.join(qcDir, sub))) stamp(path.join(qcDir, sub, f));
   for (const id of jobs.listIds()) {
     const dir = jobs.jobDir(id);
     for (const f of listFiles(dir)) stamp(path.join(dir, f));
@@ -144,6 +147,17 @@ function serve({ port = 4317, host = '127.0.0.1' } = {}) {
       }
       const delItem = p.match(/^\/api\/backlog\/(\d+)$/);
       if (delItem && req.method === 'DELETE') return send(res, 200, { backlog: backlog.remove(Number(delItem[1])) });
+
+      if (p === '/api/qc') {
+        const qc = require('./qc');
+        const since = Number(url.searchParams.get('since')) || undefined;
+        return send(res, 200, { report: qc.report({ sinceDays: since }), series: qc.series({ sinceDays: since }), index: qc.index(), since: since || null });
+      }
+      if (p === '/api/qc/file') {
+        const target = safeJoin(path.join(paths().factory, 'qc'), url.searchParams.get('path') || '');
+        if (!target || !/\.md$/.test(target) || !fs.existsSync(target)) return send(res, 404, { error: 'not found' });
+        return send(res, 200, fs.readFileSync(target, 'utf8'), MIME['.md']);
+      }
 
       const m = p.match(/^\/api\/jobs\/([^/]+)\/(files|file|diff)$/);
       if (m) {
